@@ -1,4 +1,7 @@
 
+import com.twitter.finagle.{Http, Service}
+import com.twitter.finagle.http
+import com.twitter.util.{Await, Future}
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
@@ -35,7 +38,6 @@ object Main {
     def setColor(light: Light): Unit = {
       println("Set the light of " + light.name)
     }
-
 
     implicit val lightReads: Reads[Light] = (
       (JsPath \ "manufacturername").read[String] and
@@ -150,6 +152,17 @@ object Main {
         }
       */
 
+    val client: Service[http.Request, http.Response] = Http.newService("192.168.2.101:80")
+    val request  = http.Request(http.Method.Put, "/api/p5Y67PDoNx9sQuEaUyZM9-BIePpR7lzAYt-2Q3iK/lights/1/state")
+    request.host = "192.168.2.101"8
+    request.setContentString("{\"on\": true, \"bri\": 150, \"hue\": 12000}")
+
+    val response: Future[http.Response] = client(request)
+    Await.result(response.onSuccess { rep: http.Response =>
+      //  println("Response: " + rep.getStatusCode())
+        println(rep.contentString)
+//      println("Bier is lekker")
+    })
 
     // println(Json.stringify(json))
     println("Done")

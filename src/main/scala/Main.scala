@@ -34,7 +34,7 @@ case class Light(
     uniqueid: String)
 
 object Main {
-  var lightState = MutMap[String, Boolean]()
+  var lightState = MutMap[String, Light]()
 
   implicit val lightReads: Reads[Light] = (
     (JsPath \ "manufacturername").read[String] and
@@ -53,17 +53,13 @@ object Main {
     Json.parse(lightsResponse).as[Map[String, Light]].toList map {case (key, light) => LightBox(key, light)}
   }
 
-  def setupInitialState(): MutMap[String, Boolean] = {
-    val map = fetchLights().map(lightBox => lightBox.light.uniqueid -> lightBox.light.state.reachable)
+  def setupInitialState(): MutMap[String, Light] = {
+    val map = fetchLights().map(lightBox => lightBox.light.uniqueid -> lightBox.light)
     MutMap(map: _*)
   }
 
-  def setUnReachable(lightBox: LightBox): Unit = {
-    lightState(lightBox.light.uniqueid) = false
-  }
-
-  def setReachable(lightBox: LightBox): Unit = {
-    lightState(lightBox.light.uniqueid) = true
+  def updateState(lightBox: LightBox): Unit = {
+    lightState(lightBox.light.uniqueid) = lightBox.light
   }
 
   def checkLights(): Unit = {
@@ -74,27 +70,35 @@ object Main {
     val knownLights = lights.filter(lightBox => lightState.contains(lightBox.light.uniqueid)) // Only lights we know of
 
     val reachableLights = knownLights.filter(_.light.state.reachable)
-    val unreachableLights = knownLights.filterNot(_.light.state.reachable)
-
-    val justReachableLights = reachableLights.filter(lightBox => ! lightState.get(lightBox.light.uniqueid).get)
+    val justReachableLights = reachableLights.filter(lightBox => ! lightState.get(lightBox.light.uniqueid).get.state.reachable)
     justReachableLights.foreach(setColor)
 
     // Set the lights states
-    unreachableLights.foreach(setUnReachable)
-    reachableLights.foreach(setReachable)
+    knownLights.foreach(updateState)
   }
 
   def setColor(lightBox: LightBox): Unit = {
     println("Need to set light for:")
     println(lightBox)
-    lightState(lightBox.light.uniqueid) = true
+
+    var body = Map[String, AnyVal](
+      "bri" -> lightBox.light.state.bri,
+      "sat" -> lightBox.light.state.sat,
+      "hue" -> lightBox.light.state.hue
+    )
+
+    if ( ! lightBox.light.state.on)
+      body = body + ("on" -> true)
 
     val client: Service[http.Request, http.Response] = Http.newService("192.168.2.101:80")
     val url = "/api/p5Y67PDoNx9sQuEaUyZM9-BIePpR7lzAYt-2Q3iK/lights/" + lightBox.id + "/state"
     println("Url: " + url)
     val requestLights = http.Request(http.Method.Put, url)
     requestLights.host = "192.168.2.101"
-    requestLights.setContentString("{\"bri\": 150}")
+    val requestBody = scala.util.parsing.json.JSONObject(body).toString()
+    println("Request body:")
+    println(requestBody)
+    requestLights.setContentString(requestBody)
 
     val responseLights: Future[http.Response] = client(requestLights)
     Await.result(responseLights.onSuccess { rep: http.Response =>

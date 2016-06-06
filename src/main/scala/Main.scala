@@ -75,19 +75,23 @@ object Main {
 
     // Set the lights states
     knownLights.foreach(updateState)
+
+    // Update the colors of the just reachable lights (else they would have been set to default bright by the hue)
   }
 
   def setColor(lightBox: LightBox): Unit = {
     println("Need to set light for:")
     println(lightBox)
 
+    val light = lightState(lightBox.light.uniqueid)
+
     var body = Map[String, AnyVal](
-      "bri" -> lightBox.light.state.bri,
-      "sat" -> lightBox.light.state.sat,
-      "hue" -> lightBox.light.state.hue
+      "bri" -> light.state.bri,
+      "sat" -> light.state.sat,
+      "hue" -> light.state.hue
     )
 
-    if ( ! lightBox.light.state.on)
+    if ( ! light.state.on)
       body = body + ("on" -> true)
 
     val client: Service[http.Request, http.Response] = Http.newService("192.168.2.101:80")

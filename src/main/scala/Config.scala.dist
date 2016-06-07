@@ -1,0 +1,10 @@
+
+object Config {
+  def username = {
+    "api-username"
+  }
+
+  def host = {
+    "127.0.0.1"
+  }
+}

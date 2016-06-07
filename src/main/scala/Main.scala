@@ -47,7 +47,7 @@ object Main {
     )(Light.apply _)
 
   def fetchLights(): List[LightBox] = {
-    val url = "http://192.168.2.101/api/p5Y67PDoNx9sQuEaUyZM9-BIePpR7lzAYt-2Q3iK/lights"
+    val url = "http://" + Config.host + "/api/" + Config.username + "/lights"
     val lightsResponse = scala.io.Source.fromURL(url).mkString
 
     Json.parse(lightsResponse).as[Map[String, Light]].toList map {case (key, light) => LightBox(key, light)}
@@ -94,11 +94,11 @@ object Main {
     if ( ! light.state.on)
       body = body + ("on" -> true)
 
-    val client: Service[http.Request, http.Response] = Http.newService("192.168.2.101:80")
-    val url = "/api/p5Y67PDoNx9sQuEaUyZM9-BIePpR7lzAYt-2Q3iK/lights/" + lightBox.id + "/state"
+    val client: Service[http.Request, http.Response] = Http.newService(Config.host + ":80")
+    val url = "/api/" + Config.username + "/lights/" + lightBox.id + "/state"
     println("Url: " + url)
     val requestLights = http.Request(http.Method.Put, url)
-    requestLights.host = "192.168.2.101"
+    requestLights.host = Config.host
     val requestBody = scala.util.parsing.json.JSONObject(body).toString()
     println("Request body:")
     println(requestBody)

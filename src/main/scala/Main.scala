@@ -74,7 +74,7 @@ object Main {
     justReachableLights.foreach(setColor)
 
     // Set the lights states
-    knownLights.foreach(updateState)
+    knownLights.filter(_.light.state.bri < 250).foreach(updateState)
 
     // Update the colors of the just reachable lights (else they would have been set to default bright by the hue)
   }
